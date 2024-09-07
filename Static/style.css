@@ -1,61 +1,88 @@
+/* Cài đặt font và căn chỉnh chung */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    color: #333;
+    line-height: 1.6;
     margin: 0;
     padding: 0;
+    background-color: #f4f4f4;
 }
 
+/* Container chính */
 .container {
     width: 80%;
-    margin: 0 auto;
+    margin: auto;
+    overflow: hidden;
     padding: 20px;
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Tiêu đề */
 h1 {
     text-align: center;
-    color: #007bff;
+    color: #333;
 }
 
-form {
-    display: flex;
-    flex-direction: column;
-}
-
+/* Các nhãn và input */
 label {
+    display: block;
     margin: 10px 0 5px;
-    font-weight: bold;
+    color: #555;
 }
 
-input[type="text"],
-select {
+/* Selectbox và input */
+select, input[type="text"] {
+    width: 100%;
     padding: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    box-sizing: border-box;
 }
 
+/* Button */
 button {
-    padding: 10px;
-    border: none;
-    border-radius: 4px;
-    background-color: #007bff;
+    background: #5cb85c;
     color: #fff;
-    font-size: 16px;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
     cursor: pointer;
+    font-size: 16px;
 }
 
 button:hover {
-    background-color: #0056b3;
+    background: #4cae4c;
 }
 
+/* Kết quả dự đoán */
 .result {
     margin-top: 20px;
-    padding: 15px;
+    padding: 10px;
+    background: #f9f9f9;
     border: 1px solid #ddd;
     border-radius: 4px;
-    background-color: #e9ecef;
+}
+
+/* Chú thích */
+span[title] {
+    cursor: help;
+    border-bottom: 1px dotted #333;
+    color: #007bff;
+}
+
+span[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    background: #333;
+    color: #fff;
+    padding: 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-size: 12px;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
 }

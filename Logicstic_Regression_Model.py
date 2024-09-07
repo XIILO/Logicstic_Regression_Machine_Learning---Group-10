@@ -29,7 +29,7 @@ data['loan_status'] = data['loan_status'].map({'Approved': 1, 'Rejected': 0})
 print(data.head(2))
 
 # 1.5 Kiểm tra dữ liệu có NaN hay không ?
-print(data.isna().sum())
+print(data.isna().sum())    
 
 # 1.6 Chuyển đổi dữ liệu trong các cột, để nó nằm trong khoảng MinMax(0 - 1), trừ cột loan_status
 scaler = MinMaxScaler()
