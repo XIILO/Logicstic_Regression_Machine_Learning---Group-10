@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Approval Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="info-container">
+            <h3>Nhóm 10</h3>
+            <p>Gồm các thành viên:</p>
+            <ul>
+                <li>Hà Lê Bình An</li>
+                <li>Nguyễn Văn An</li>
+                <li>Nguyễn Văn Biên</li>
+                <li>Bùi Thị Thanh Thư</li>
+                <li>Hà Vi</li>
+            </ul>
+        </div>
+        <div class="form-container">
+            <h2>Loan Approval Prediction</h2>
+            <form action="/predict" method="post">
+                <label for="no_of_dependents">Number of Dependents:</label>
+                <input type="text" id="no_of_dependents" name="no_of_dependents">
+                <label for="education">Education (Graduate/Not Graduate):</label>
+                <input type="text" id="education" name="education">
+                <label for="self_employed">Self Employed (Yes/No):</label>
+                <input type="text" id="self_employed" name="self_employed">
+                <label for="income_annum">Annual Income:</label>
+                <input type="text" id="income_annum" name="income_annum">
+                <label for="loan_amount">Loan Amount:</label>
+                <input type="text" id="loan_amount" name="loan_amount">
+                <label for="loan_term">Loan Term:</label>
+                <input type="text" id="loan_term" name="loan_term">
+                <label for="cibil_score">CIBIL Score:</label>
+                <input type="text" id="cibil_score" name="cibil_score">
+                <label for="residential_assets_value">Residential Assets Value:</label>
+                <input type="text" id="residential_assets_value" name="residential_assets_value">
+                <label for="commercial_assets_value">Commercial Assets Value:</label>
+                <input type="text" id="commercial_assets_value" name="commercial_assets_value">
+                <label for="luxury_assets_value">Luxury Assets Value:</label>
+                <input type="text" id="luxury_assets_value" name="luxury_assets_value">
+                <label for="bank_asset_value">Bank Asset Value:</label>
+                <input type="text" id="bank_asset_value" name="bank_asset_value">
+                <input type="submit" value="Predict">
+            </form>
+            {% if prediction_text %}
+                <div class="result">{{ prediction_text }}</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
