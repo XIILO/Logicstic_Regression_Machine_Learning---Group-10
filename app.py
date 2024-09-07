@@ -1,94 +1,122 @@
+from flask import Flask, request, render_template
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
 import numpy as np
-from flask import Flask, request, render_template, jsonify
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+import sys
+
+sys.stdout.reconfigure(encoding="utf-8")
 
 app = Flask(__name__)
 
-# Đọc dữ liệu từ file CSV
+# GIAI ĐOẠN 1: TIỀN XỬ LÝ DATASET
+def preprocess_data(file_path):
+    data = pd.read_csv(file_path)
+    data = data.drop('loan_id', axis=1)
+    data.columns = data.columns.str.strip()
+    data['self_employed'] = data['self_employed'].str.strip()
+    data['education'] = data['education'].str.strip()
+    data['loan_status'] = data['loan_status'].str.strip()
+    data['education'] = data['education'].map({'Graduate': 1, 'Not Graduate': 0})
+    data['self_employed'] = data['self_employed'].map({'Yes': 1, 'No': 0})
+    data['loan_status'] = data['loan_status'].map({'Approved': 1, 'Rejected': 0})
+    data.insert(0, 'bias', 1)
+    
+    if data.isna().sum().sum() > 0:
+        raise ValueError("Dữ liệu chứa giá trị NaN")
+
+    scaler = MinMaxScaler()
+    feature_columns = ['no_of_dependents', 'education', 'self_employed', 'income_annum', 
+                        'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value', 
+                        'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']
+    data[feature_columns] = scaler.fit_transform(data[feature_columns])
+    
+    return data, scaler
+
+def train_model(data):
+    features_data = data[['bias', 'no_of_dependents', 'education', 'self_employed', 
+                          'income_annum', 'loan_amount', 'loan_term', 'cibil_score', 
+                          'residential_assets_value', 'commercial_assets_value', 
+                          'luxury_assets_value', 'bank_asset_value']]
+    lables_data = data['loan_status']
+    
+    features_training, features_testing, lables_training, lables_testing = train_test_split(
+        features_data, lables_data, test_size=0.1, random_state=42
+    )
+    
+    def sigmoidf(z):
+        return 1 / (1 + np.exp(-z))
+
+    def predictf(features, weights):
+        return sigmoidf(np.dot(features, weights))
+
+    def log_lossf(y_true, y_pred):
+        epsilon = 1e-15
+        y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+        m = len(y_true)
+        return - (1 / m) * np.sum(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+
+    def gradient_descent(features, labels, weights, learning_rate, iterations):
+        m = len(labels)
+        for i in range(iterations):
+            y_pred = predictf(features, weights)
+            gradient = np.dot(features.T, (y_pred - labels)) / m
+            weights -= learning_rate * gradient
+            if i % 100 == 0:
+                loss = log_lossf(labels, y_pred)
+                print(f"Iteration {i}: Loss = {loss}")
+        return weights
+
+    weights = np.zeros(features_training.shape[1])
+    learning_rate = 0.001
+    iterations = 1000
+    weights = gradient_descent(features_training, lables_training, weights, learning_rate, iterations)
+    
+    y_pred_testing = predictf(features_testing, weights)
+    y_pred_testing = [1 if i > 0.5 else 0 for i in y_pred_testing]
+
+    def accuracy(y_true, y_pred):
+        return np.mean(y_true == y_pred)
+
+    accuracy_score = accuracy(lables_testing, y_pred_testing)
+    print(f"Accuracy: {accuracy_score * 100}%")
+
+    return weights, predictf
+
 file_path = "C:/Users/lebin/Downloads/Loan_Approval/Training/loan_approval_dataset.csv"
-data = pd.read_csv(file_path)
-print(data.head(5))
-
-# Ánh xạ các giá trị chuỗi sang số
-data['education'] = data['education'].map({'Graduate': 1, 'Not Graduate': 0})
-data['self_employed'] = data['self_employed'].map({'Yes': 1, 'No': 0})
-data['loan_status'] = data['loan_status'].map({'Approved': 1, 'Rejected': 0})
-print(data.head(5))
-
-print(data.isna().sum())
-# Chọn các cột cần chuẩn hóa, bao gồm cả các cột mới
-columns_to_normalize = [
-    'no_of_dependents', 'income_annum', 'loan_amount', 
-    'loan_term', 'cibil_score', 'residential_assets_value', 
-    'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value'
-]
-
-# Sử dụng Min-Max Scaling, đưa dữ liệu trong các cột nằm trong khoảng 0 - 1 
-scaler = MinMaxScaler()
-data[columns_to_normalize] = scaler.fit_transform(data[columns_to_normalize])
-
-# Tách các đặc trưng và nhãn
-X = np.array(data.drop(['loan_id', 'loan_status'], axis=1).values, dtype=float)
-y = np.array(data['loan_status'].values, dtype=float)
-
-# Thêm cột bias (cột toàn giá trị 1) vào x
-X = np.insert(X, 0, 1, axis=1)
-
-# Khởi tạo tham số theta
-theta = np.zeros(X.shape[1])
-
-# Cài đặt hàm sigmoid
-def sigmoid(z):
-    return 1 / (1 + np.exp(-z))
-
-# Cài đặt hàm chi phí (cost function)
-def cost_function(X, y, theta):
-    m = len(y)
-    h = sigmoid(X @ theta)
-    cost = (-1/m) * (y.T @ np.log(h) + (1 - y).T @ np.log(1 - h))
-    return cost
-
-# Cài đặt Gradient Descent
-def gradient_descent(X, y, theta, learning_rate, iterations):
-    m = len(y)
-    for _ in range(iterations):
-        gradient = (1/m) * X.T @ (sigmoid(X @ theta) - y)
-        theta -= learning_rate * gradient
-    return theta
-
-# Huấn luyện mô hình
-theta = gradient_descent(X, y, theta, learning_rate=0.01, iterations=2000)
-
-# Dự đoán và thiết lập ngưỡng
-def predict(X, theta, threshold=0.5):
-    return sigmoid(X @ theta) >= threshold
+data, scaler = preprocess_data(file_path)
+model_weights, predictf = train_model(data)
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
-def predict_loan():
-    input_data = request.form.to_dict()
-    input_df = pd.DataFrame([input_data])
-    input_df['education'] = input_df['education'].map({'Graduate': 1, 'Not Graduate': 0})
-    input_df['self_employed'] = input_df['self_employed'].map({'Yes': 1, 'No': 0})
-    
-    # Chuyển đổi các giá trị đầu vào thành số thực
-    for column in columns_to_normalize:
-        input_df[column] = pd.to_numeric(input_df[column])
-    
-    input_df[columns_to_normalize] = scaler.transform(input_df[columns_to_normalize])
-    input_df.insert(0, 'bias', 1)
-    
-    # Đảm bảo số lượng cột khớp với mô hình
-    if input_df.shape[1] != len(theta):
-        return render_template('index.html', prediction_text='Error: Input data does not match model dimensions.')
-    
-    prediction = predict(input_df.values, theta)
-    return render_template('index.html', prediction_text='Loan Status: {}'.format('Approved' if prediction[0] else 'Rejected'))
+def predict():
+    try:
+        data = {
+            'no_of_dependents': float(request.form['no_of_dependents']),
+            'education': int(request.form['education']),
+            'self_employed': int(request.form['self_employed']),
+            'income_annum': float(request.form['income_annum'].replace(',', '')),
+            'loan_amount': float(request.form['loan_amount'].replace(',', '')),
+            'loan_term': int(request.form['loan_term']),
+            'cibil_score': float(request.form['cibil_score']),
+            'residential_assets_value': float(request.form['residential_assets_value'].replace(',', '')),
+            'commercial_assets_value': float(request.form['commercial_assets_value'].replace(',', '')),
+            'luxury_assets_value': float(request.form['luxury_assets_value'].replace(',', '')),
+            'bank_asset_value': float(request.form['bank_asset_value'].replace(',', ''))
+        }
+        input_data = pd.DataFrame([data])
+        input_data = scaler.transform(input_data)
+        input_data = np.insert(input_data, 0, 1, axis=1)  # Thêm cột bias
+        prediction = predictf(input_data, model_weights)
+        result = "Được chấp thuận" if prediction[0] > 0.5 else "Bị từ chối"
+        return f'Kết quả dự đoán: {result}'
+    except ValueError as e:
+        return f'Lỗi dữ liệu đầu vào: {str(e)}'
+    except Exception as e:
+        return f'Lỗi không xác định: {str(e)}'
 
-# Thêm dòng này vào cuối file
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)
