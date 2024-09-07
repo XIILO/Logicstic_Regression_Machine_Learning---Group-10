@@ -85,8 +85,8 @@ def gradient_descent(features, labels, weights, learning_rate, iterations):
 # 3.5 Khởi tạo trọng số với các giá trị ngẫu nhiên
 weights = np.zeros(features_training.shape[1])
 # 3.6 Chọn learning rate và số vòng lặp
-learning_rate = 0.001
-iterations = 1000
+learning_rate = 0.01
+iterations = 30000
 # 3.7 Huấn luyện mô hình
 weights = gradient_descent(features_training, lables_training, weights, learning_rate, iterations)
 
