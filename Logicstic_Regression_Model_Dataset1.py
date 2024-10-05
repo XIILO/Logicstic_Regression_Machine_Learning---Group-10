@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # GIAI ĐOẠN 1: TIỀN XỬ LÝ DATASET
 # 1.1 Import data 
-file_path = "C:/Users/lebin/Downloads/Loan_Approval/Training/loan_approval_dataset.csv"
+file_path = "E:/Năm 4 kỳ 1/Học máy - Ngô Hữu Huy/Loan_Approval/Training/loan_approval_dataset.csv"
 data = pd.read_csv(file_path)
 # Xóa cột 'loan_id' khỏi data
 data = data.drop('loan_id', axis=1)   
@@ -19,28 +19,40 @@ data = data.drop('loan_id', axis=1)
 data.columns = data.columns.str.strip()
 
 # 1.3 Xử lý khoảng trắng trong dữ liệu thuộc các cột (trường)
-data['self_employed'] = data['self_employed'].str.strip()
-data['education'] = data['education'].str.strip()
-data['loan_status'] = data['loan_status'].str.strip()
-
+columns_to_strip = ['self_employed', 'education', 'loan_status']
+for col in columns_to_strip:
+    data[col] = data[col].str.strip()
+    
 # 1.4 Ánh xạ dữ từ chữ sang số 
-data['education'] = data['education'].map({'Graduate': 1, 'Not Graduate': 0})
-data['self_employed'] = data['self_employed'].map({'Yes': 1, 'No': 0})
-data['loan_status'] = data['loan_status'].map({'Approved': 1, 'Rejected': 0})
+mapping_dict = {
+    'education': {'Graduate': 1, 'Not Graduate': 0},
+    'self_employed': {'Yes': 1, 'No': 0},
+    'loan_status': {'Approved': 1, 'Rejected': 0}
+}
+for col, mapping in mapping_dict.items():
+    data[col] = data[col].map(mapping)
 
 # 1.5 Thêm cột bias vào dataset
 data.insert(0, 'bias', 1)
 # 1.6 Kiểm tra dữ liệu có NaN hay không ?
-print(data.isna().sum())    
+# print(data.isna().sum())   
 
-# 1.7 Chuyển đổi dữ liệu trong các cột, để nó nằm trong khoảng MinMax(0 - 1), trừ cột loan_status
+# 1.7 Chuyển đổi dữ liệu trong các cột, để nó nằm trong khoảng MinMax(0 - 1), trừ lables
 scaler = MinMaxScaler()
-data[['no_of_dependents', 'education', 'self_employed', 'income_annum', 'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value', 'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']] = scaler.fit_transform(data[['no_of_dependents', 'education', 'self_employed', 'income_annum', 'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value', 'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']])
+columns_to_scale = ['no_of_dependents', 'education', 'self_employed', 
+                    'income_annum', 'loan_amount', 'loan_term',
+                    'cibil_score', 'residential_assets_value',
+                    'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']
+data[columns_to_scale] = scaler.fit_transform(data[columns_to_scale])
 
 
 # GIAI ĐOẠN 2: CHUẨN BỊ DỮ LIỆU
 # 2.1 Tách đặc trưng và nhãn
-features_data = data[['bias','no_of_dependents', 'education', 'self_employed', 'income_annum', 'loan_amount', 'loan_term', 'cibil_score', 'residential_assets_value', 'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']]
+features_columns = ['bias', 'no_of_dependents', 'education',
+                    'self_employed', 'income_annum', 'loan_amount',
+                    'loan_term', 'cibil_score', 'residential_assets_value',
+                    'commercial_assets_value', 'luxury_assets_value', 'bank_asset_value']
+features_data = data[features_columns]
 lables_data = data['loan_status']
 
 # 2.2 Tách dữ liệu thành tập huấn luyện và kiểm tra
@@ -56,14 +68,14 @@ def sigmoidf(z):
     return 1 / (1 + np.exp(-z))
 
 # 3.2 Hàm dự đoán
-def predictf(features, weights):
-    z = np.dot(features, weights)
-    return sigmoidf(z)
+def predictf(features, weights): # truyền features_training và trọng số (thê ta đã khởi tạo)
+    z = np.dot(features, weights) # Tính giá trị z
+    return sigmoidf(z) # return kết quả
     
 # 3.3 Hàm mất mát
 def log_lossf(y_true, y_pred):
     epsilon = 1e-15
-    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+    y_pred = np.clip(y_pred, epsilon, 1 - epsilon) # giới hạn các phần tử trong 
     m = len(y_true)
     loss = - (1 / m) * np.sum(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
     return loss
@@ -76,7 +88,7 @@ def gradient_descent(features, labels, weights, learning_rate, iterations):
         gradient = np.dot(features.T, (y_pred - labels)) / m
         weights -= learning_rate * gradient
         
-        if i % 100 == 0:
+        if i % 1000 == 0:
             loss = log_lossf(labels, y_pred)
             print(f"Iteration {i}: Loss = {loss}")
     
@@ -84,9 +96,10 @@ def gradient_descent(features, labels, weights, learning_rate, iterations):
 
 # 3.5 Khởi tạo trọng số với các giá trị ngẫu nhiên
 weights = np.zeros(features_training.shape[1])
+
 # 3.6 Chọn learning rate và số vòng lặp
 learning_rate = 0.01
-iterations = 30000
+iterations = 10000
 # 3.7 Huấn luyện mô hình
 weights = gradient_descent(features_training, lables_training, weights, learning_rate, iterations)
 
@@ -95,7 +108,7 @@ y_pred_testing = predictf(features_testing, weights)
 y_pred_testing = [1 if i > 0.5 else 0 for i in y_pred_testing]
 
 # 3.8 In kết quả
-print(f"Predicted labels: {y_pred_testing}")
+# print(f"Predicted labels: {y_pred_testing}")
 
 def accuracy(y_true, y_pred):
     return np.mean(y_true == y_pred)
